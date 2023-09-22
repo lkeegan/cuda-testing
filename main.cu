@@ -12,13 +12,13 @@ int main(){
 	std::vector<float> C(N, -99.0);
 
     // allocate device data
-    float *d_A{SafeCudaMalloc<float>(N)};
-    float *d_B{SafeCudaMalloc<float>(N)};
-    float *d_C{SafeCudaMalloc<float>(N)};
+    float *d_A{CheckedCudaMalloc<float>(N)};
+    float *d_B{CheckedCudaMalloc<float>(N)};
+    float *d_C{CheckedCudaMalloc<float>(N)};
 
-    // copy local values to device (count is in bytes!)
-    cudaMemcpy(d_A, A.data(), A.size()*sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(d_B, B.data(), B.size()*sizeof(float), cudaMemcpyHostToDevice);
+    // copy local values to device
+    CheckedCopyToDevice(d_A, A);
+    CheckedCopyToDevice(d_B, B);
 
     // both threads and blocks are up to 3d indexed
     // max number of threads per thread block is 1024
@@ -26,10 +26,12 @@ int main(){
     // also ignores padding issues, i.e. assumes N is divisible by 256
     dim3 threadsPerBlock{256, 1, 1};
     dim3 numBlocks{N/threadsPerBlock.x, 1, 1};
+
+    // launch kernel
 	VecAdd<<<numBlocks, threadsPerBlock>>>(d_A, d_B, d_C);
 
-    // copy values back from device (count is in bytes!)
-    cudaMemcpy(C.data(), d_C, C.size()*sizeof(float), cudaMemcpyDeviceToHost);
+    // copy values back from device
+    CheckedCopyToHost(C, d_C);
 
     // free device data
     cudaFree(d_A);
