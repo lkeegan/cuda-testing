@@ -1,3 +1,3 @@
 #pragma once
 
-__global__ void VecAdd(float* A, float* B, float* C);
+__global__ void VecAdd(const float* A, const float* B, float* C);

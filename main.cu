@@ -3,7 +3,7 @@
 #include <vector>
 
 int main(){
-	unsigned int N{1024*1024*1024};
+	unsigned int N{256*1024*1024*2};
     std::size_t size = N * sizeof(float);
 
     // local data
@@ -23,8 +23,13 @@ int main(){
     cudaMemcpy(d_A, A.data(), size, cudaMemcpyHostToDevice);
     cudaMemcpy(d_B, B.data(), size, cudaMemcpyHostToDevice);
 
-    // invoke kernel
-	VecAdd<<<1, N>>>(d_A, d_B, d_C);
+    // both threads and blocks can be 1-2,2-d or 3-d indexed
+    // max number of threads per thread block is 1024
+    // here we use 1-d for both, with 256 threads per block
+    // also ignores padding issues, i.e. assumes N is divisible by 256
+    dim3 threadsPerBlock{256, 1, 1};
+    dim3 numBlocks{N/threadsPerBlock.x, 1, 1};
+	VecAdd<<<numBlocks, threadsPerBlock>>>(d_A, d_B, d_C);
 
     // copy device values to local (count is in bytes!)
     cudaMemcpy(C.data(), d_C, size, cudaMemcpyDeviceToHost);
@@ -34,9 +39,6 @@ int main(){
     cudaFree(d_B);
     cudaFree(d_C);
 
-    exit(0);
-    // print results
-	for (const auto& c : C){
-    	std::cout << c << std::endl;
-	}
+    // print a couple of elements of output array
+    std::cout << C[0] << " ... " << C[N/2] << " ... " << C[N-1] << std::endl;
 }
